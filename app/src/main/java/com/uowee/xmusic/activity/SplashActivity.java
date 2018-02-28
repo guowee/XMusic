@@ -1,6 +1,7 @@
 package com.uowee.xmusic.activity;
 
 import android.content.Intent;
+import android.support.v7.app.AppCompatActivity;
 import android.view.animation.Animation;
 import android.content.Context;
 import android.os.Bundle;
@@ -16,7 +17,7 @@ import com.uowee.xmusic.R;
  * Created by GuoWee on 2018/2/28.
  */
 
-public class SplashActivity extends BaseActivity {
+public class SplashActivity extends AppCompatActivity {
 
     private Context mContext;
 

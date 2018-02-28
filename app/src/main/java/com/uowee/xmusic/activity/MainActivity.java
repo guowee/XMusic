@@ -27,7 +27,7 @@ public class MainActivity extends BaseActivity
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
 
-        //enable是true的时候会走系统的逻辑，展示的是系统图标,设置为false时显示自己设置的图标,这个时候因为屏蔽了系统操作，此时点击图标是不会滑出侧滑栏的，所以需要自己添加点击侧滑功能：
+        //enable是true的时候会系统的逻辑，展示的是系统图标,设置为false时显示自己设置的图标,这个时候因为屏蔽了系统操作，此时点击图标是不会滑出侧滑栏的，所以需要自己添加点击侧滑功能：
         toggle.setDrawerIndicatorEnabled(false);
         toggle.setToolbarNavigationClickListener(new View.OnClickListener() {
             @Override
@@ -82,17 +82,13 @@ public class MainActivity extends BaseActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_camera) {
+        if (id == R.id.nav_mode) {
             // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
+        } else if (id == R.id.nav_skin) {
 
-        } else if (id == R.id.nav_slideshow) {
+        } else if (id == R.id.nav_exit) {
 
-        } else if (id == R.id.nav_manage) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
+        } else if (id == R.id.nav_setting) {
 
         }
 
