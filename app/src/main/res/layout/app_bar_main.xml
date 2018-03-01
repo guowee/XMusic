@@ -20,22 +20,22 @@
             android:layout_height="?actionBarSize"
             android:gravity="center">
 
-            <ImageView
-                android:id="@+id/bar_net"
-                android:layout_width="55dp"
-                android:layout_height="match_parent"
-                android:layout_toLeftOf="@+id/bar_music"
-                android:background="@drawable/actionbar_disco"
-                android:clickable="true" />
 
             <ImageView
                 android:id="@+id/bar_music"
                 android:layout_width="55dp"
                 android:layout_height="match_parent"
-                android:layout_centerInParent="true"
+                android:layout_toLeftOf="@+id/bar_net"
                 android:background="@drawable/actionbar_music"
                 android:clickable="true" />
 
+            <ImageView
+                android:id="@+id/bar_net"
+                android:layout_width="55dp"
+                android:layout_height="match_parent"
+                android:layout_centerInParent="true"
+                android:background="@drawable/actionbar_disco"
+                android:clickable="true" />
 
             <ImageView
                 android:id="@+id/bar_search"

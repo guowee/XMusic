@@ -75,18 +75,19 @@ public class MainActivity extends BaseActivity
     }
 
     private void initViewPager() {
-        tabs.add(netBar);
         tabs.add(musicBar);
+        tabs.add(netBar);
+
 
         CustomViewPagerAdapter mAdapter = new CustomViewPagerAdapter(getSupportFragmentManager());
 
-        mAdapter.addFragment(new TabNetFragment());
         mAdapter.addFragment(new MainFragment());
+        mAdapter.addFragment(new TabNetFragment());
 
 
         mViewPager.setAdapter(mAdapter);
-        mViewPager.setCurrentItem(0);
-        musicBar.setSelected(true);
+        mViewPager.setCurrentItem(1);
+        netBar.setSelected(true);
 
         mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
@@ -108,14 +109,14 @@ public class MainActivity extends BaseActivity
         netBar.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                mViewPager.setCurrentItem(0);
+                mViewPager.setCurrentItem(1);
             }
         });
 
         musicBar.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                mViewPager.setCurrentItem(1);
+                mViewPager.setCurrentItem(0);
             }
         });
     }
