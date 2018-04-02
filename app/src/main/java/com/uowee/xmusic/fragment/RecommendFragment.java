@@ -2,22 +2,39 @@ package com.uowee.xmusic.fragment;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.ImageSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.facebook.drawee.backends.pipeline.Fresco;
+import com.facebook.drawee.interfaces.DraweeController;
+import com.facebook.drawee.view.SimpleDraweeView;
+import com.facebook.imagepipeline.common.ResizeOptions;
+import com.facebook.imagepipeline.request.ImageRequest;
+import com.facebook.imagepipeline.request.ImageRequestBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.uowee.xmusic.R;
 import com.uowee.xmusic.XMApplication;
 import com.uowee.xmusic.entry.FocusItemInfo;
 import com.uowee.xmusic.entry.RecommendListNewAlbumInfo;
+import com.uowee.xmusic.entry.RecommendListRadioInfo;
 import com.uowee.xmusic.entry.RecommendListRecommendInfo;
 import com.uowee.xmusic.net.HttpUtils;
 import com.youth.banner.Banner;
@@ -27,6 +44,7 @@ import com.youth.banner.listener.OnBannerListener;
 import com.youth.banner.loader.ImageLoader;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Created by GuoWee on 2018/3/1.
@@ -38,14 +56,22 @@ public class RecommendFragment extends BaseFragment {
     private LayoutInflater mLayoutInflater;
 
     private View mRecommendView, mLoadView;
+    private int width = 160, height = 160;
 
     private Banner banner;
     private ArrayList<String> mPathList = new ArrayList<>();
     private ArrayList<String> mTitleList = new ArrayList<>();
+    private RecommendAdapter mRecomendAdapter;
+    private RecyclerView mRecyclerView1;
+    private GridLayoutManager mGridLayoutManager1;
 
     private ArrayList<RecommendListNewAlbumInfo> mNewAlbumsList = new ArrayList<>();
-
+    private ArrayList<RecommendListRadioInfo> mRadioList = new ArrayList<>();
     private ArrayList<RecommendListRecommendInfo> mRecommendList = new ArrayList<>();
+
+    private HashMap<String, View> mViewHashMap;
+    private View v1;
+    private LinearLayout mViewContent;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -59,9 +85,14 @@ public class RecommendFragment extends BaseFragment {
         mLayoutInflater = LayoutInflater.from(mActivity);
         mRecommendView = mLayoutInflater.inflate(R.layout.fragment_recommend, container, false);
         banner = mRecommendView.findViewById(R.id.banner_view);
+        mViewContent = mRecommendView.findViewById(R.id.recommend_layout);
+        mLoadView = mLayoutInflater.inflate(R.layout.loading, null, false);
+
+
         initBanner();
 
-        mLoadView = mLayoutInflater.inflate(R.layout.loading, null, false);
+        new LoadRecommend().execute(0);
+        mRecomendAdapter = new RecommendAdapter(null);
 
         mViewGroup.addView(mRecommendView);
         mViewGroup.addView(mLoadView);
@@ -82,7 +113,13 @@ public class RecommendFragment extends BaseFragment {
                 JsonObject object = HttpUtils.getResponseFromJson(mActivity, url, false);
 
                 JsonArray focusArray = object.get("pic").getAsJsonArray();
+                if (!mPathList.isEmpty()) {
+                    mPathList.clear();
+                }
 
+                if (!mTitleList.isEmpty()) {
+                    mTitleList.clear();
+                }
                 for (int i = 0; i < focusArray.size(); i++) {
                     mPathList.add(XMApplication.gsonInstance().fromJson(focusArray.get(i), FocusItemInfo.class).getRandpic());
                     mTitleList.add(XMApplication.gsonInstance().fromJson(focusArray.get(i), FocusItemInfo.class).getRandpic_desc());
@@ -120,8 +157,6 @@ public class RecommendFragment extends BaseFragment {
                         .start();
             }
         }.execute(0);
-
-
     }
 
     class MyLoader extends ImageLoader {
@@ -140,10 +175,16 @@ public class RecommendFragment extends BaseFragment {
             JsonObject object = list.get("result").getAsJsonObject();
             JsonArray newAlbumArray = object.get("mix_1").getAsJsonObject().get("result").getAsJsonArray();
             JsonArray recommendArray = object.get("diy").getAsJsonObject().get("result").getAsJsonArray();
+            JsonArray radioArray = object.get("radio").getAsJsonObject().get("result").getAsJsonArray();
+
+            mNewAlbumsList.clear();
+            mRecommendList.clear();
+            mRadioList.clear();
 
             for (int i = 0; i < newAlbumArray.size(); i++) {
                 mNewAlbumsList.add(XMApplication.gsonInstance().fromJson(newAlbumArray.get(i), RecommendListNewAlbumInfo.class));
                 mRecommendList.add(XMApplication.gsonInstance().fromJson(recommendArray.get(i), RecommendListRecommendInfo.class));
+                mRadioList.add(XMApplication.gsonInstance().fromJson(radioArray.get(i), RecommendListRadioInfo.class));
             }
             for (RecommendListRecommendInfo info : mRecommendList) {
                 Log.i("TAG", info.toString());
@@ -152,5 +193,105 @@ public class RecommendFragment extends BaseFragment {
             return params[0];
         }
 
+        @Override
+        protected void onPostExecute(Integer integer) {
+            v1 = mLayoutInflater.inflate(R.layout.recommend_playlist, mViewContent, false);
+            mRecyclerView1 = (RecyclerView) v1.findViewById(R.id.recommend_playlist_recyclerview);
+            mGridLayoutManager1 = new GridLayoutManager(mActivity, 3);
+            mRecyclerView1.setLayoutManager(mGridLayoutManager1);
+            mRecyclerView1.setAdapter(mRecomendAdapter);
+
+            mRecomendAdapter.update(mRecommendList);
+            mViewContent.addView(v1);
+        }
     }
+
+    class RecommendAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+        private ArrayList<RecommendListRecommendInfo> mList;
+        SpannableString spanString;
+
+        public RecommendAdapter(ArrayList<RecommendListRecommendInfo> list) {
+            Bitmap b = BitmapFactory.decodeResource(getResources(), R.mipmap.index_icn_earphone);
+            ImageSpan imgSpan = new ImageSpan(mActivity, b, ImageSpan.ALIGN_BASELINE);
+            spanString = new SpannableString("icon");
+            spanString.setSpan(imgSpan, 0, 4, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+            mList = list;
+        }
+
+
+        public void update(ArrayList<RecommendListRecommendInfo> list) {
+            mList = list;
+            notifyDataSetChanged();
+        }
+
+        @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            LayoutInflater layoutInflater = LayoutInflater.from(parent.getContext());
+            ItemView viewholder = new ItemView(layoutInflater.inflate(R.layout.recommend_playlist_item, parent, false));
+
+            return viewholder;
+        }
+
+        @Override
+        public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
+            final RecommendListRecommendInfo info = mList.get(position);
+
+            ImageRequest request = ImageRequestBuilder.newBuilderWithSource(Uri.parse(info.getPic()))
+                    .setResizeOptions(new ResizeOptions(width, height))
+                    .build();
+
+            DraweeController controller = Fresco.newDraweeControllerBuilder()
+                    .setOldController(((ItemView) holder).art.getController())
+                    .setImageRequest(request)
+                    .build();
+
+            ((ItemView) holder).art.setController(controller);
+
+
+            ((ItemView) holder).name.setText(info.getTitle());
+            ((ItemView) holder).count.setText(spanString);
+
+            int count = Integer.parseInt(info.getListenum());
+            if (count > 10000) {
+                count = count / 10000;
+                ((ItemView) holder).count.append(" " + count + "万");
+            } else {
+                ((ItemView) holder).count.append(" " + info.getListenum());
+            }
+            ((ItemView) holder).itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                }
+            });
+        }
+
+        @Override
+        public int getItemCount() {
+            if (mList == null) {
+                return 0;
+            }
+
+            if (mList.size() < 7) {
+                return mList.size();
+            } else {
+                return 6;
+            }
+        }
+
+        class ItemView extends RecyclerView.ViewHolder {
+            private SimpleDraweeView art;
+            private TextView name, count;
+
+            public ItemView(View itemView) {
+                super(itemView);
+                art = (SimpleDraweeView) itemView.findViewById(R.id.playlist_art);
+                name = (TextView) itemView.findViewById(R.id.playlist_name);
+                count = (TextView) itemView.findViewById(R.id.playlist_listen_count);
+            }
+        }
+    }
+
+
 }
