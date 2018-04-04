@@ -37,6 +37,7 @@ import com.uowee.xmusic.entry.RecommendListNewAlbumInfo;
 import com.uowee.xmusic.entry.RecommendListRadioInfo;
 import com.uowee.xmusic.entry.RecommendListRecommendInfo;
 import com.uowee.xmusic.net.HttpUtils;
+import com.uowee.xmusic.util.PreferencesUtility;
 import com.youth.banner.Banner;
 import com.youth.banner.BannerConfig;
 import com.youth.banner.Transformer;
@@ -58,24 +59,45 @@ public class RecommendFragment extends BaseFragment {
     private View mRecommendView, mLoadView;
     private int width = 160, height = 160;
 
+
+    private String mPosition;
     private Banner banner;
     private ArrayList<String> mPathList = new ArrayList<>();
     private ArrayList<String> mTitleList = new ArrayList<>();
     private RecommendAdapter mRecomendAdapter;
-    private RecyclerView mRecyclerView1;
-    private GridLayoutManager mGridLayoutManager1;
+    private RadioAdapter mRadioAdapter;
+    private NewAlbumsAdapter mNewAlbumsAdapter;
+
+
+    private RecyclerView mRecyclerView1, mRecyclerView2, mRecyclerView3;
+    private GridLayoutManager mGridLayoutManager1, mGridLayoutManager2, mGridLayoutManager3;
 
     private ArrayList<RecommendListNewAlbumInfo> mNewAlbumsList = new ArrayList<>();
     private ArrayList<RecommendListRadioInfo> mRadioList = new ArrayList<>();
     private ArrayList<RecommendListRecommendInfo> mRecommendList = new ArrayList<>();
 
     private HashMap<String, View> mViewHashMap;
-    private View v1;
+    private View v1, v2, v3;
     private LinearLayout mViewContent;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (mPosition == null) {
+            return;
+        }
+        String st = PreferencesUtility.getInstance(mActivity).getItemPosition();
+        if (!st.equals(mPosition)) {
+            mPosition = st;
+            mViewContent.removeAllViews();
+            addViews();
+        }
+
     }
 
     @Nullable
@@ -93,6 +115,8 @@ public class RecommendFragment extends BaseFragment {
 
         new LoadRecommend().execute(0);
         mRecomendAdapter = new RecommendAdapter(null);
+        mRadioAdapter = new RadioAdapter(null);
+        mNewAlbumsAdapter = new NewAlbumsAdapter(null);
 
         mViewGroup.addView(mRecommendView);
         mViewGroup.addView(mLoadView);
@@ -186,10 +210,6 @@ public class RecommendFragment extends BaseFragment {
                 mRecommendList.add(XMApplication.gsonInstance().fromJson(recommendArray.get(i), RecommendListRecommendInfo.class));
                 mRadioList.add(XMApplication.gsonInstance().fromJson(radioArray.get(i), RecommendListRadioInfo.class));
             }
-            for (RecommendListRecommendInfo info : mRecommendList) {
-                Log.i("TAG", info.toString());
-            }
-
             return params[0];
         }
 
@@ -201,9 +221,42 @@ public class RecommendFragment extends BaseFragment {
             mRecyclerView1.setLayoutManager(mGridLayoutManager1);
             mRecyclerView1.setAdapter(mRecomendAdapter);
 
+            v2 = mLayoutInflater.inflate(R.layout.recommend_newalbums, mViewContent, false);
+            mRecyclerView2 = (RecyclerView) v2.findViewById(R.id.recommend_newalbums_recyclerview);
+            mGridLayoutManager2 = new GridLayoutManager(mActivity, 3);
+            mRecyclerView2.setLayoutManager(mGridLayoutManager2);
+            mRecyclerView2.setAdapter(mNewAlbumsAdapter);
+
+            v3 = mLayoutInflater.inflate(R.layout.recommend_radio, mViewContent, false);
+            mRecyclerView3 = (RecyclerView) v3.findViewById(R.id.recommend_radio_recyclerview);
+            mGridLayoutManager3 = new GridLayoutManager(mActivity, 3);
+            mRecyclerView3.setLayoutManager(mGridLayoutManager3);
+            mRecyclerView3.setAdapter(mRadioAdapter);
+
+
             mRecomendAdapter.update(mRecommendList);
-            mViewContent.addView(v1);
+            mRadioAdapter.update(mRadioList);
+            mNewAlbumsAdapter.update(mNewAlbumsList);
+
+            mViewHashMap = new HashMap<>();
+            mViewHashMap.put("推荐歌单", v1);
+            mViewHashMap.put("最新专辑", v2);
+            mViewHashMap.put("主播电台", v3);
+            mPosition = PreferencesUtility.getInstance(mActivity).getItemPosition();
+            mViewContent.removeView(mLoadView);
+            addViews();
         }
+    }
+
+    private void addViews() {
+
+        String[] strs = mPosition.split("/");
+
+
+        for (int i = 0; i < strs.length; i++) {
+            mViewContent.addView(mViewHashMap.get(strs[i]));
+        }
+
     }
 
     class RecommendAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
@@ -293,5 +346,158 @@ public class RecommendFragment extends BaseFragment {
         }
     }
 
+    class RadioAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+        private ArrayList<RecommendListRadioInfo> mList;
 
+        public RadioAdapter(ArrayList<RecommendListRadioInfo> list) {
+            mList = list;
+        }
+
+        public void update(ArrayList<RecommendListRadioInfo> list) {
+            mList = list;
+            notifyDataSetChanged();
+        }
+
+        @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            LayoutInflater layoutInflater = LayoutInflater.from(parent.getContext());
+            ItemView viewholder = new ItemView(layoutInflater.inflate(R.layout.recommend_newalbums_item, parent, false));
+
+            return viewholder;
+        }
+
+        @Override
+        public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
+            final RecommendListRadioInfo info = mList.get(position);
+
+            ImageRequest request = ImageRequestBuilder.newBuilderWithSource(Uri.parse(info.getPic()))
+                    .setResizeOptions(new ResizeOptions(width, height))
+                    .build();
+
+            DraweeController controller = Fresco.newDraweeControllerBuilder()
+                    .setOldController(((ItemView) holder).art.getController())
+                    .setImageRequest(request)
+                    .build();
+
+            ((ItemView) holder).art.setController(controller);
+
+            ((ItemView) holder).albumName.setText(info.getTitle());
+            ((ItemView) holder).artsit.setText(info.getDesc());
+            ((ItemView) holder).itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                }
+            });
+        }
+
+        @Override
+        public int getItemCount() {
+            if (mList == null) {
+                return 0;
+            }
+
+            if (mList.size() < 7) {
+                return mList.size();
+            } else {
+                return 6;
+            }
+        }
+
+        class ItemView extends RecyclerView.ViewHolder implements View.OnClickListener {
+            private SimpleDraweeView art;
+            private TextView albumName, artsit;
+
+            public ItemView(View itemView) {
+                super(itemView);
+                art = (SimpleDraweeView) itemView.findViewById(R.id.album_art);
+                albumName = (TextView) itemView.findViewById(R.id.album_name);
+                artsit = (TextView) itemView.findViewById(R.id.artist_name);
+            }
+
+            @Override
+            public void onClick(View v) {
+
+            }
+        }
+
+
+    }
+
+
+    class NewAlbumsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+        private ArrayList<RecommendListNewAlbumInfo> mList;
+
+        public NewAlbumsAdapter(ArrayList<RecommendListNewAlbumInfo> list) {
+            mList = list;
+        }
+
+        public void update(ArrayList<RecommendListNewAlbumInfo> list) {
+            mList = list;
+            notifyDataSetChanged();
+        }
+
+        @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            LayoutInflater layoutInflater = LayoutInflater.from(parent.getContext());
+            ItemView viewholder = new ItemView(layoutInflater.inflate(R.layout.recommend_newalbums_item, parent, false));
+
+            return viewholder;
+        }
+
+        @Override
+        public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
+            final RecommendListNewAlbumInfo info = mList.get(position);
+
+            ImageRequest request = ImageRequestBuilder.newBuilderWithSource(Uri.parse(info.getPic()))
+                    .setResizeOptions(new ResizeOptions(width, height))
+                    .build();
+
+            DraweeController controller = Fresco.newDraweeControllerBuilder()
+                    .setOldController(((ItemView) holder).art.getController())
+                    .setImageRequest(request)
+                    .build();
+
+            ((ItemView) holder).art.setController(controller);
+
+            ((ItemView) holder).albumName.setText(info.getTitle());
+            ((ItemView) holder).artsit.setText(info.getAuthor());
+            ((ItemView) holder).itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                }
+            });
+        }
+
+        @Override
+        public int getItemCount() {
+            if (mList == null) {
+                return 0;
+            }
+
+            if (mList.size() < 7) {
+                return mList.size();
+            } else {
+                return 6;
+            }
+        }
+
+
+        class ItemView extends RecyclerView.ViewHolder implements View.OnClickListener {
+            private SimpleDraweeView art;
+            private TextView albumName, artsit;
+
+            public ItemView(View itemView) {
+                super(itemView);
+                art = (SimpleDraweeView) itemView.findViewById(R.id.album_art);
+                albumName = (TextView) itemView.findViewById(R.id.album_name);
+                artsit = (TextView) itemView.findViewById(R.id.artist_name);
+            }
+
+            @Override
+            public void onClick(View v) {
+
+            }
+        }
+    }
 }
